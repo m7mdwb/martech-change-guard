@@ -8,6 +8,11 @@ description: Preflight and verify proposed bulk changes to CRM or marketing reco
 Use the deterministic guard before a bulk data mutation. Do not substitute an LLM review
 for the script's changeset, invariant checks, rollback operations, or verification result.
 
+Resolve `scripts/guard.py` relative to this `SKILL.md` and invoke that resolved absolute
+path. Installed plugins run from the user's project, so do not assume `scripts/guard.py`
+exists under the current working directory. Keep input and output paths in the user's
+workspace; never write plan artifacts into the installed skill or plugin cache.
+
 ## Plan a change
 
 Obtain a current-state export and a proposed-state export with the same stable record key.
@@ -15,7 +20,7 @@ If the user has only described a desired transformation, create the proposed exp
 touching the live system. Then run:
 
 ```bash
-python scripts/guard.py plan --before current.csv --proposed proposed.csv \
+python <absolute-skill-directory>/scripts/guard.py plan --before current.csv --proposed proposed.csv \
   --key record_id --policy policy.json --out guard-plan
 ```
 
@@ -45,7 +50,7 @@ or unexpected response; do not improvise values that are absent from the approve
 Export or re-fetch the affected records, then run:
 
 ```bash
-python scripts/guard.py verify --before current.csv --actual after.csv \
+python <absolute-skill-directory>/scripts/guard.py verify --before current.csv --actual after.csv \
   --key record_id --plan guard-plan --out guard-verification
 ```
 
