@@ -1,0 +1,28 @@
+{
+  "name": "martech-change-guard",
+  "version": "0.1.0",
+  "description": "Preflight, verify, and reverse bulk CRM and marketing-data changes.",
+  "author": {
+    "name": "m7mdwb",
+    "url": "https://github.com/m7mdwb"
+  },
+  "homepage": "https://github.com/m7mdwb/martech-change-guard",
+  "repository": "https://github.com/m7mdwb/martech-change-guard",
+  "license": "MIT",
+  "keywords": ["crm", "martech", "revops", "safety", "rollback", "verification"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Martech Change Guard",
+    "shortDescription": "Preflight and verify CRM bulk changes.",
+    "longDescription": "Creates deterministic changesets, checks business invariants, estimates blast radius, selects canaries, produces rollback operations, and verifies post-change state.",
+    "developerName": "m7mdwb",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Read", "Write"],
+    "websiteURL": "https://github.com/m7mdwb/martech-change-guard",
+    "defaultPrompt": [
+      "Preflight this CRM bulk change before anything is written.",
+      "Verify this post-change export against the approved plan."
+    ],
+    "brandColor": "#0F766E"
+  }
+}

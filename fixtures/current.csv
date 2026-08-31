@@ -1,0 +1,6 @@
+record_id,lifecycle_stage,owner,lead_source,opted_out,note
+1,lead,ana,,false,Original
+2,mql,ana,paid,false,Original
+3,sql,ben,organic,true,Original
+4,customer,ben,partner,false,Original
+5,lead,ana,,false,Original

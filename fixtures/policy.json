@@ -1,0 +1,17 @@
+{
+  "allowed_fields": ["lifecycle_stage", "lead_source", "owner", "opted_out"],
+  "protected_fields": ["owner", "opted_out"],
+  "immutable_fields": [],
+  "fill_only_fields": ["lead_source"],
+  "monotonic_fields": {
+    "lifecycle_stage": ["lead", "mql", "sql", "opportunity", "customer"]
+  },
+  "approval_required_over_records": 100,
+  "approval_required_over_percent": 10,
+  "hard_limit_records": 10000,
+  "hard_limit_percent": 80,
+  "risk_weights": {
+    "lifecycle_stage": 15,
+    "owner": 25
+  }
+}

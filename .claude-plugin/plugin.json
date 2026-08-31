@@ -1,0 +1,13 @@
+{
+  "name": "martech-change-guard",
+  "version": "0.1.0",
+  "description": "Preflight, verify, and reverse bulk CRM and marketing-data changes.",
+  "author": {
+    "name": "m7mdwb"
+  },
+  "homepage": "https://github.com/m7mdwb/martech-change-guard",
+  "repository": "https://github.com/m7mdwb/martech-change-guard",
+  "license": "MIT",
+  "keywords": ["crm", "martech", "revops", "safety", "rollback", "verification"],
+  "skills": "./skills/"
+}
