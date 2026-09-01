@@ -1,7 +1,6 @@
 {
   "source": {
     "repository": "https://github.com/m7mdwb/martech-verify",
-    "commit": "059c425",
     "skill": "routing-simulate",
     "fixture": "fixtures/routing-simulate/leads_sample.csv"
   },

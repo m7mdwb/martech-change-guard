@@ -1,0 +1,238 @@
+{
+  "martech_change_guard": {
+    "evidence_sha256": "a7b674737e56c5d7c1fa05576443e443d26222e9cc0d7eaa516cfc96b01bc69f",
+    "failed_verification": {
+      "mismatches": [],
+      "missing_records": [],
+      "schema_version": "1.0",
+      "side_effects": [
+        {
+          "actual": "revoked",
+          "before": "granted",
+          "field": "consent_status",
+          "record_id": "L020"
+        }
+      ],
+      "status": "failed",
+      "summary": {
+        "affected_records": 9,
+        "approved_field_changes": 9,
+        "mismatches": 0,
+        "missing_records": 0,
+        "side_effects": 1,
+        "unexpected_records": 0
+      },
+      "unexpected_records": []
+    },
+    "passed_verification": {
+      "mismatches": [],
+      "missing_records": [],
+      "schema_version": "1.0",
+      "side_effects": [],
+      "status": "passed",
+      "summary": {
+        "affected_records": 9,
+        "approved_field_changes": 9,
+        "mismatches": 0,
+        "missing_records": 0,
+        "side_effects": 0,
+        "unexpected_records": 0
+      },
+      "unexpected_records": []
+    },
+    "plan": {
+      "blast_radius": {
+        "added_records": 0,
+        "before_records": 9,
+        "changed_percent": 100.0,
+        "changed_records": 9,
+        "field_changes": 9,
+        "fields_changed": [
+          "owner"
+        ],
+        "removed_records": 0
+      },
+      "decision": "review",
+      "review_reasons": [
+        "changed records exceed the approval threshold",
+        "changed percentage exceeds the approval threshold"
+      ],
+      "risk": {
+        "level": "medium",
+        "note": "Deterministic heuristic, not a calibrated probability.",
+        "score": 45
+      },
+      "schema_version": "1.0",
+      "violations": [],
+      "warnings": []
+    },
+    "reason": "Route nine leads identified as unassigned by MarTech Verify"
+  },
+  "martech_verify": {
+    "assignments": {
+      "ana": 19,
+      "lee": 1,
+      "sam": 1,
+      "unassigned": 9
+    },
+    "default": "unassigned",
+    "leads": 30,
+    "problems": [
+      {
+        "detail": "rule 'High intent trial' tests 'employes', which no lead carries — the rule can never match anything",
+        "kind": "unknown_field",
+        "severity": "critical"
+      },
+      {
+        "detail": "rule 'France mid-market' matched 3 lead(s) and won none — 'Europe catch-all' sits above it and takes them all",
+        "kind": "shadowed_rule",
+        "severity": "high"
+      },
+      {
+        "detail": "rule 'Japan' matched no lead at all",
+        "kind": "dead_rule",
+        "severity": "high"
+      },
+      {
+        "detail": "9 lead(s) (30%) matched no rule and fell to 'unassigned'",
+        "kind": "unrouted_leads",
+        "severity": "high"
+      },
+      {
+        "detail": "'ana' receives 19 leads while the lightest owner receives 1 — a 19x spread",
+        "kind": "load_imbalance",
+        "severity": "medium"
+      }
+    ],
+    "rule_stats": [
+      {
+        "assign": "ana",
+        "broader_above": [],
+        "matched": 4,
+        "rule": "Enterprise DACH",
+        "shadowed_by": {},
+        "when": "country in DE,AT,CH and employees >= 500",
+        "won": 4
+      },
+      {
+        "assign": "ana",
+        "broader_above": [],
+        "matched": 19,
+        "rule": "Europe catch-all",
+        "shadowed_by": {
+          "Enterprise DACH": 4
+        },
+        "when": "country in DE,AT,CH,FR,NL,ES,IT,CY,PL",
+        "won": 15
+      },
+      {
+        "assign": "claire",
+        "broader_above": [
+          "Europe catch-all"
+        ],
+        "matched": 3,
+        "rule": "France mid-market",
+        "shadowed_by": {
+          "Europe catch-all": 3
+        },
+        "when": "country = FR and employees >= 50",
+        "won": 0
+      },
+      {
+        "assign": "kenji",
+        "broader_above": [],
+        "matched": 0,
+        "rule": "Japan",
+        "shadowed_by": {},
+        "when": "country = JP",
+        "won": 0
+      },
+      {
+        "assign": "sam",
+        "broader_above": [],
+        "matched": 0,
+        "rule": "High intent trial",
+        "shadowed_by": {},
+        "when": "employes > 200 and source = trial",
+        "won": 0
+      },
+      {
+        "assign": "round_robin: sam, lee",
+        "broader_above": [],
+        "matched": 9,
+        "rule": "SMB inbound",
+        "shadowed_by": {
+          "Europe catch-all": 7
+        },
+        "when": "employees < 50 or plan_interest = starter",
+        "won": 2
+      }
+    ],
+    "rules": 6,
+    "unknown_fields": [
+      {
+        "fields": [
+          "employes"
+        ],
+        "rule": "High intent trial"
+      }
+    ],
+    "unrouted": 9,
+    "unrouted_sample": [
+      {
+        "country": "US",
+        "employees": "800",
+        "industry": "software",
+        "lead_id": "L014",
+        "plan_interest": "enterprise",
+        "source": "demo"
+      },
+      {
+        "country": "US",
+        "employees": "120",
+        "industry": "finance",
+        "lead_id": "L015",
+        "plan_interest": "growth",
+        "source": "webinar"
+      },
+      {
+        "country": "GB",
+        "employees": "340",
+        "industry": "software",
+        "lead_id": "L016",
+        "plan_interest": "growth",
+        "source": "demo"
+      },
+      {
+        "country": "BR",
+        "employees": "150",
+        "industry": "agriculture",
+        "lead_id": "L018",
+        "plan_interest": "growth",
+        "source": "webinar"
+      },
+      {
+        "country": "IN",
+        "employees": "900",
+        "industry": "software",
+        "lead_id": "L020",
+        "plan_interest": "enterprise",
+        "source": "demo"
+      }
+    ]
+  },
+  "provenance": {
+    "data": "Bundled synthetic fixtures only",
+    "martech_change_guard": {
+      "commit": "f6b5de43105c6ce5286faff31fba2aa980120073",
+      "repository": "https://github.com/m7mdwb/martech-change-guard",
+      "skill": "martech-change-guard"
+    },
+    "martech_verify": {
+      "commit": "b4d0ca4180a69980f2488ac66718e7699777cc52",
+      "repository": "https://github.com/m7mdwb/martech-verify",
+      "skill": "routing-simulate"
+    }
+  },
+  "schema_version": "1.0"
+}

@@ -23,7 +23,9 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(claude["name"], "martech-change-guard")
         self.assertEqual(codex["skills"], "./skills/")
         self.assertEqual(listing["source"], ".")
-        self.assertIn("martech-verify", {item["name"] for item in market["plugins"]})
+        companions = {item["name"]: item for item in market["plugins"]}
+        self.assertIn("martech-verify", companions)
+        self.assertEqual(companions["martech-verify"]["version"], VERSION)
 
     def test_skill_metadata_is_user_ready(self):
         folder = ROOT / "skills/martech-change-guard"
@@ -42,6 +44,19 @@ class PackageTests(unittest.TestCase):
         self.assertIn("$skill-installer", readme)
         self.assertIn("MarTech safety loop", readme)
         self.assertNotRegex(readme, re.compile(r"\bMartech\b"))
+
+    def test_connected_walkthrough_is_packaged_with_provenance(self):
+        docs = ROOT / "docs"
+        self.assertTrue((docs / "MARTECH-OPS-LOOP.md").is_file())
+        self.assertTrue((docs / "martech-ops-loop-demo.gif").is_file())
+        self.assertTrue((docs / "martech-ops-loop-walkthrough.mp4").is_file())
+        data = json.loads((docs / "martech-ops-loop-data.json").read_text(encoding="utf-8"))
+        provenance = data["provenance"]
+        self.assertRegex(provenance["martech_verify"]["commit"], r"^[0-9a-f]{40}$")
+        self.assertRegex(provenance["martech_change_guard"]["commit"], r"^[0-9a-f]{40}$")
+        self.assertEqual(data["martech_verify"]["unrouted"], 9)
+        self.assertEqual(data["martech_change_guard"]["passed_verification"]["status"],
+                         "passed")
 
 
 if __name__ == "__main__":
