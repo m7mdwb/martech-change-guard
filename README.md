@@ -1,7 +1,15 @@
 # MarTech Change Guard
 
+**One question: is it safe to make this change?** Preventive, before the fact, one
+workflow from plan to receipt.
+
 GitHub gives code a diff, tests, review, and rollback. Martech Change Guard brings the
 same discipline to bulk CRM and marketing-data changes.
+
+> Companion project: **[martech-verify](https://github.com/m7mdwb/martech-verify)** answers the
+> other half, *what is wrong with this data?* — four read-only checks for PII leakage, campaign
+> tagging, conversion gaps and lead routing. Same rules: local exports, no connectors, no
+> dependencies.
 
 It compares a current export with a proposed export, produces the exact field-level
 changeset, enforces business invariants, estimates blast radius, selects a deterministic

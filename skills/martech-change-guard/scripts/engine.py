@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import io
 import json
 import os
+import sys
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
@@ -86,8 +88,71 @@ def values_equal(left: Any, right: Any) -> bool:
     return comparable(scalar(left)) == comparable(scalar(right))
 
 
+def _raise_field_limit() -> None:
+    """csv refuses fields over 131,072 characters and raises rather than truncating.
+
+    One long URL or base64 blob in a single cell is enough, and "field larger than field
+    limit" is not a sentence anyone can act on. Ported from martech-verify, where this was
+    a real crash rather than a hypothetical one.
+    """
+    limit = sys.maxsize
+    while True:
+        try:
+            csv.field_size_limit(limit)
+            return
+        except OverflowError:
+            limit //= 10
+
+
+_raise_field_limit()
+
+_MAGIC = (
+    (bytes([0x89]) + b"PNG", "PNG image"),
+    (bytes([0xFF, 0xD8, 0xFF]), "JPEG image"),
+    (b"GIF87a", "GIF image"),
+    (b"GIF89a", "GIF image"),
+    (b"%PDF-", "PDF document"),
+    (b"PK" + bytes([0x03, 0x04]), "ZIP or XLSX file"),
+)
+
+
+def _decode_bytes(raw: bytes) -> str:
+    """Excel saves cp1252 and exports arrive with a BOM. Never raise on encoding."""
+    for enc in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
+        try:
+            return raw.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("utf-8", errors="replace")
+
+
+def _read_text(path: str) -> str:
+    """Read a text export, refusing bytes that cannot support a trustworthy comparison.
+
+    Ported from martech-verify. A renamed PNG used to decode as latin-1 and yield a
+    confident empty changeset, and for a tool that authorises writes to a CRM that is
+    considerably worse than crashing. Fail closed instead.
+    """
+    with open(path, "rb") as handle:
+        raw = handle.read()
+    if not raw.strip():
+        raise GuardError("%s contains no data. Export at least one row and try again." % path)
+    for signature, kind in _MAGIC:
+        if raw.startswith(signature):
+            raise GuardError("%s is a %s, not a text export. Export CSV, TSV or JSON Lines."
+                             % (path, kind))
+    if bytes([0x00]) in raw:
+        raise GuardError("%s contains NUL bytes and appears binary or UTF-16. Export it as "
+                         "UTF-8 CSV, TSV or JSON Lines." % path)
+    controls = sum(byte < 32 and byte not in (9, 10, 13) for byte in raw[:65536])
+    if controls > max(4, len(raw[:65536]) // 100):
+        raise GuardError("%s contains binary control bytes. Export a plain-text CSV, TSV or "
+                         "JSON Lines file." % path)
+    return _decode_bytes(raw)
+
+
 def _read_delimited(path: str) -> List[Dict[str, Any]]:
-    with open(path, "r", encoding="utf-8-sig", newline="") as handle:
+    with io.StringIO(_read_text(path)) as handle:
         sample = handle.read(8192)
         handle.seek(0)
         try:
@@ -97,13 +162,15 @@ def _read_delimited(path: str) -> List[Dict[str, Any]]:
         reader = csv.DictReader(handle, dialect=dialect)
         if not reader.fieldnames:
             raise GuardError("input has no header row: %s" % path)
-        return [{str(k).strip(): scalar(v) for k, v in row.items() if k is not None}
-                for row in reader]
+        try:
+            return [{str(k).strip(): scalar(v) for k, v in row.items() if k is not None}
+                    for row in reader]
+        except csv.Error as exc:
+            raise GuardError("could not parse %s as delimited text: %s" % (path, exc))
 
 
 def _read_json(path: str) -> List[Dict[str, Any]]:
-    with open(path, "r", encoding="utf-8-sig") as handle:
-        text = handle.read()
+    text = _read_text(path)
     try:
         parsed = json.loads(text)
     except json.JSONDecodeError:
