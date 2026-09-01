@@ -41,7 +41,8 @@ def run(command, expected):
 
 
 def git_head(repo):
-    result = run(["git", "-C", str(repo), "rev-parse", "HEAD"], 0)
+    result = run(["git", "-c", "safe.directory=%s" % repo, "-C", str(repo),
+                  "rev-parse", "HEAD"], 0)
     return result.stdout.strip()
 
 
