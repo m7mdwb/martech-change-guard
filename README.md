@@ -1,4 +1,4 @@
-# Martech Change Guard
+# MarTech Change Guard
 
 GitHub gives code a diff, tests, review, and rollback. Martech Change Guard brings the
 same discipline to bulk CRM and marketing-data changes.
