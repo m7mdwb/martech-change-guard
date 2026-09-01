@@ -80,8 +80,8 @@ class MalformedInputTests(unittest.TestCase):
                 with self.subTest(name=name):
                     before = tmp_path / ("before-" + name)
                     proposed = tmp_path / ("proposed-" + name)
-                    before.write_text(content, encoding="utf-8", newline="")
-                    proposed.write_text(content, encoding="utf-8", newline="")
+                    before.write_bytes(content.encode("utf-8"))
+                    proposed.write_bytes(content.encode("utf-8"))
                     result = run_guard("plan", "--before", before, "--proposed", proposed,
                                        "--key", "record_id", "--out", tmp_path / (name + "-out"))
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
