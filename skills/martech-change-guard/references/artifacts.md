@@ -7,20 +7,25 @@
 - `risk-report.json`: `allow`, `review`, or `block`; deterministic score and level; blast
   radius; invariant violations; and warnings.
 - `canary.csv`: a deterministic, diverse subset of changed records. Rows are field-level
-  operations, not full record replacements.
+  operations, not full record replacements. Identifiers, field names, and values are JSON
+  encoded inside cells; adapters must decode every `*_json` column.
 - `rollback.csv`: inverse field-level operations with the value expected after execution.
   An adapter should use that expected value as an optimistic-concurrency check.
 - `manifest.json`: SHA-256 hashes of the other plan artifacts.
 
 ## Verification artifacts
 
-- `verification.json`: expected-field mismatches, missing records, and changes to fields that
-  were not approved on affected records.
-- `receipt.json`: final `passed` or `failed` status and hashes linking the receipt to the plan
-  and verification evidence.
+- `verification.json`: expected-field mismatches, missing or unexpected records, and changes
+  to fields that were not approved anywhere in the supplied scope.
+- `receipt.json`: final `passed` or `failed` status and hashes linking the receipt to the plan,
+  verification evidence, baseline export, and exact post-change export.
 
 Verification refuses a changeset whose digest no longer matches `manifest.json`, and refuses
 a `--before` file whose digest differs from the one recorded at plan time.
+
+CSV operation artifacts JSON-encode every untrusted cell so values beginning with spreadsheet
+formula characters remain data. They are still machine-oriented: consume `changeset.json`
+when possible and preserve record IDs as opaque strings.
 
 ## Adapter invariants
 

@@ -40,7 +40,8 @@ defaults.
 
 Defaults require review above 100 records or 10%, and block above 10,000 records. The
 default percentage hard limit is 100%; set a lower value when your operating policy requires it.
-Additions, deletions, duplicate IDs, and missing IDs always block in V1.
+Additions, deletions, duplicate IDs, missing IDs, and mismatched export schemas always fail
+closed in V1.
 
 Empty means `null`, an empty string, or whitespace. Text comparisons for monotonic fields
 are case-insensitive; original values are preserved in artifacts.

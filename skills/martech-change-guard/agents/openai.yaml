@@ -1,6 +1,7 @@
 interface:
-  display_name: "Martech Change Guard"
+  display_name: "MarTech Change Guard"
   short_description: "Preflight and verify CRM bulk changes"
-  default_prompt: "Use $martech-change-guard to preflight this CRM changeset before anything is written."
+  brand_color: "#0F766E"
+  default_prompt: "Use $martech-change-guard to preflight this CRM change and verify it afterward."
 policy:
   allow_implicit_invocation: true

@@ -1,10 +1,11 @@
-"""Deterministic planning and verification engine for Martech Change Guard."""
+"""Deterministic planning and verification engine for MarTech Change Guard."""
 from __future__ import annotations
 
 import csv
 import hashlib
 import io
 import json
+import math
 import os
 import sys
 from collections import defaultdict, deque
@@ -151,35 +152,72 @@ def _read_text(path: str) -> str:
     return _decode_bytes(raw)
 
 
+
+def _json_constant(value: str) -> None:
+    raise GuardError("JSON contains non-finite number %s; use a finite number or null" % value)
+
+
+def _json_object(pairs) -> Dict[str, Any]:
+    result = {}
+    folded = set()
+    for key, value in pairs:
+        normalized = str(key).casefold()
+        if normalized in folded:
+            raise GuardError("JSON object contains duplicate field %r" % key)
+        folded.add(normalized)
+        result[key] = value
+    return result
+
+
+def _loads_json(text: str) -> Any:
+    return json.loads(text, parse_constant=_json_constant, object_pairs_hook=_json_object)
+
+
 def _read_delimited(path: str) -> List[Dict[str, Any]]:
-    with io.StringIO(_read_text(path)) as handle:
-        sample = handle.read(8192)
-        handle.seek(0)
-        try:
-            dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
-        except csv.Error:
-            dialect = csv.excel_tab if path.lower().endswith(".tsv") else csv.excel
-        reader = csv.DictReader(handle, dialect=dialect)
-        if not reader.fieldnames:
+    text = _read_text(path)
+    sample = text[:8192]
+    try:
+        dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
+    except csv.Error:
+        dialect = csv.excel_tab if path.lower().endswith(".tsv") else csv.excel
+    try:
+        reader = csv.reader(io.StringIO(text, newline=""), dialect=dialect, strict=True)
+        raw_header = next(reader, None)
+        if not raw_header:
             raise GuardError("input has no header row: %s" % path)
-        try:
-            return [{str(k).strip(): scalar(v) for k, v in row.items() if k is not None}
-                    for row in reader]
-        except csv.Error as exc:
-            raise GuardError("could not parse %s as delimited text: %s" % (path, exc))
+        header = [str(name).strip() for name in raw_header]
+        if any(not name for name in header):
+            raise GuardError("input has an empty column name: %s" % path)
+        folded = [name.casefold() for name in header]
+        duplicates = sorted({name for name in folded if folded.count(name) > 1})
+        if duplicates:
+            raise GuardError("input has duplicate column names: %s" % ", ".join(duplicates))
+        rows = []
+        for number, values in enumerate(reader, 2):
+            if not values or not any(values):
+                continue
+            if len(values) != len(header):
+                raise GuardError("row %d has %d fields but the header has %d: %s" %
+                                 (number, len(values), len(header), path))
+            rows.append({header[index]: scalar(value) for index, value in enumerate(values)})
+    except csv.Error as exc:
+        raise GuardError("could not parse delimited input %s: %s" % (path, exc))
+    if not rows:
+        raise GuardError("input has a header but no data rows: %s" % path)
+    return rows
 
 
 def _read_json(path: str) -> List[Dict[str, Any]]:
     text = _read_text(path)
     try:
-        parsed = json.loads(text)
+        parsed = _loads_json(text)
     except json.JSONDecodeError:
         parsed = []
         for number, line in enumerate(text.splitlines(), 1):
             if not line.strip():
                 continue
             try:
-                parsed.append(json.loads(line))
+                parsed.append(_loads_json(line))
             except json.JSONDecodeError as exc:
                 raise GuardError("invalid JSON on line %d of %s: %s" %
                                  (number, path, exc.msg))
@@ -189,7 +227,18 @@ def _read_json(path: str) -> List[Dict[str, Any]]:
         raise GuardError("JSON input must be an array, JSON Lines, or {'records': [...]}")
     if any(not isinstance(row, dict) for row in parsed):
         raise GuardError("every input record must be a JSON object")
-    return [{str(k): scalar(v) for k, v in row.items()} for row in parsed]
+    if not parsed:
+        raise GuardError("JSON input contains no records: %s" % path)
+    rows = [{str(k).strip(): scalar(v) for k, v in row.items()} for row in parsed]
+    expected_fields = set(rows[0])
+    for number, row in enumerate(rows, 1):
+        folded = [name.casefold() for name in row]
+        if any(not name for name in row) or len(set(folded)) != len(folded):
+            raise GuardError("JSON record %d has empty or duplicate field names" % number)
+        if set(row) != expected_fields:
+            raise GuardError("JSON record %d has different fields. Export a rectangular "
+                             "record set with the same fields on every record." % number)
+    return rows
 
 
 def read_records(path: str, key: str) -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]:
@@ -209,12 +258,36 @@ def read_records(path: str, key: str) -> Tuple[List[Dict[str, Any]], Dict[str, D
     return rows, indexed
 
 
+def record_schema(records: Dict[str, Dict[str, Any]]) -> set:
+    fields = set()
+    for row in records.values():
+        fields.update(row)
+    return fields
+
+
+def require_matching_schema(left: Dict[str, Dict[str, Any]], right: Dict[str, Dict[str, Any]],
+                            left_name: str, right_name: str) -> None:
+    left_fields, right_fields = record_schema(left), record_schema(right)
+    if left_fields == right_fields:
+        return
+    missing = sorted(left_fields - right_fields)
+    extra = sorted(right_fields - left_fields)
+    details = []
+    if missing:
+        details.append("missing from %s: %s" % (right_name, ", ".join(missing)))
+    if extra:
+        details.append("only in %s: %s" % (right_name, ", ".join(extra)))
+    raise GuardError("export schemas differ (%s). Export the same columns in both files; "
+                     "a missing column is never treated as permission to clear data." % "; ".join(details))
+
+
 def read_policy(path: Optional[str]) -> Dict[str, Any]:
     supplied: Dict[str, Any] = {}
     if path:
         try:
             with open(path, "r", encoding="utf-8-sig") as handle:
-                supplied = json.load(handle)
+                supplied = json.load(handle, parse_constant=_json_constant,
+                                     object_pairs_hook=_json_object)
         except (OSError, json.JSONDecodeError) as exc:
             raise GuardError("could not read policy %s: %s" % (path, exc))
         if not isinstance(supplied, dict):
@@ -238,13 +311,19 @@ def read_policy(path: Optional[str]) -> Dict[str, Any]:
     if not isinstance(policy["risk_weights"], dict):
         raise GuardError("policy.risk_weights must be an object")
     for field, weight in policy["risk_weights"].items():
-        if not isinstance(weight, (int, float)) or isinstance(weight, bool) or not 0 <= weight <= 50:
+        if (not isinstance(weight, (int, float)) or isinstance(weight, bool) or
+                (isinstance(weight, float) and not math.isfinite(weight)) or
+                not 0 <= weight <= 50):
             raise GuardError("risk weight for %s must be a number from 0 to 50" % field)
     for name in ("approval_required_over_records", "approval_required_over_percent",
                  "hard_limit_records", "hard_limit_percent"):
         value = policy[name]
-        if not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0:
+        if (not isinstance(value, (int, float)) or isinstance(value, bool) or
+                (isinstance(value, float) and not math.isfinite(value)) or value < 0):
             raise GuardError("policy.%s must be a non-negative number" % name)
+    for name in ("approval_required_over_percent", "hard_limit_percent"):
+        if policy[name] > 100:
+            raise GuardError("policy.%s must be between 0 and 100" % name)
     return policy
 
 
@@ -445,13 +524,13 @@ def _json_cell(value: Any) -> str:
 
 def _write_operations(path: str, changes: Iterable[Dict[str, Any]], reverse: bool = False) -> None:
     with open(path, "w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["record_id", "field", "value_json",
+        writer = csv.DictWriter(handle, fieldnames=["record_id_json", "field_json", "value_json",
                                                     "expected_current_value_json"])
         writer.writeheader()
         for change in changes:
             writer.writerow({
-                "record_id": change["record_id"],
-                "field": change["field"],
+                "record_id_json": _json_cell(change["record_id"]),
+                "field_json": _json_cell(change["field"]),
                 "value_json": _json_cell(change["before"] if reverse else change["after"]),
                 "expected_current_value_json": _json_cell(
                     change["after"] if reverse else change["before"]),
@@ -519,24 +598,25 @@ def verify_changes(changeset: Dict[str, Any], before: Dict[str, Dict[str, Any]],
     approved: Dict[str, Dict[str, Any]] = defaultdict(dict)
     for change in changeset["changes"]:
         approved[change["record_id"]][change["field"]] = change["after"]
-    mismatches, side_effects, missing_records = [], [], []
-    for record_id in sorted(approved):
-        if record_id not in actual:
-            missing_records.append(record_id)
-            continue
+    mismatches, side_effects = [], []
+    missing_records = sorted(set(before) - set(actual))
+    unexpected_records = sorted(set(actual) - set(before))
+    for record_id in sorted(set(before) & set(actual)):
         baseline = before.get(record_id, {})
         observed = actual[record_id]
-        for field, expected in approved[record_id].items():
+        approved_fields = approved.get(record_id, {})
+        for field, expected in approved_fields.items():
             got = observed.get(field)
             if not values_equal(got, expected):
                 mismatches.append({"record_id": record_id, "field": field,
                                    "expected": expected, "actual": scalar(got)})
-        for field in sorted((set(baseline) | set(observed)) - {key} - set(approved[record_id])):
+        for field in sorted((set(baseline) | set(observed)) - {key} - set(approved_fields)):
             if not values_equal(baseline.get(field), observed.get(field)):
                 side_effects.append({"record_id": record_id, "field": field,
                                      "before": scalar(baseline.get(field)),
                                      "actual": scalar(observed.get(field))})
-    status = "passed" if not mismatches and not side_effects and not missing_records else "failed"
+    status = "passed" if not (mismatches or side_effects or missing_records or
+                               unexpected_records) else "failed"
     return {
         "schema_version": "1.0",
         "created_at": utc_now(),
@@ -547,15 +627,17 @@ def verify_changes(changeset: Dict[str, Any], before: Dict[str, Dict[str, Any]],
             "mismatches": len(mismatches),
             "side_effects": len(side_effects),
             "missing_records": len(missing_records),
+            "unexpected_records": len(unexpected_records),
         },
         "mismatches": mismatches,
         "side_effects": side_effects,
         "missing_records": missing_records,
+        "unexpected_records": unexpected_records,
     }
 
 
 def write_verification(out_dir: str, plan_dir: str, verification: Dict[str, Any],
-                       force: bool = False) -> Dict[str, Any]:
+                       sources: Dict[str, Any], force: bool = False) -> Dict[str, Any]:
     prepare_output(out_dir, force)
     verification_path = os.path.join(out_dir, "verification.json")
     _write_json(verification_path, verification)
@@ -569,6 +651,7 @@ def write_verification(out_dir: str, plan_dir: str, verification: Dict[str, Any]
             "changeset_sha256": sha256_file(changeset_path),
             "manifest_sha256": sha256_file(manifest_path) if os.path.isfile(manifest_path) else None,
         },
+        "sources": sources,
         "verification_sha256": sha256_file(verification_path),
         "summary": verification["summary"],
         "note": "SHA-256 links evidence; this receipt is not an identity signature.",

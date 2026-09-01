@@ -3,7 +3,7 @@ name: martech-change-guard
 description: Preflight and verify proposed bulk changes to CRM or marketing records. Use before imports, cleanup, routing, lifecycle, owner, consent, or enrichment updates, and after execution to detect partial writes or side effects. This skill plans and verifies changes; it does not itself authorize or perform live writes.
 ---
 
-# Martech Change Guard
+# MarTech Change Guard
 
 Use the deterministic guard before a bulk data mutation. Do not substitute an LLM review
 for the script's changeset, invariant checks, rollback operations, or verification result.
@@ -16,6 +16,9 @@ workspace; never write plan artifacts into the installed skill or plugin cache.
 ## Plan a change
 
 Obtain a current-state export and a proposed-state export with the same stable record key.
+Export the same columns in both files; schema drift fails closed. Read
+[references/input-guide.md](references/input-guide.md) when the files or export scope are
+unclear.
 If the user has only described a desired transformation, create the proposed export without
 touching the live system. Then run:
 
@@ -55,8 +58,10 @@ python <absolute-skill-directory>/scripts/guard.py verify --before current.csv -
 ```
 
 Treat `receipt.json` as the result. `passed` means every approved field reached its expected
-value and no unapproved field changed on affected records. `failed` means the operation is
-not verified; report mismatches and side effects before considering rollback.
+value, the record set stayed intact, and no unapproved field changed anywhere in the supplied
+scope. `failed` means the operation is not verified; report mismatches, missing or unexpected
+records, and side effects before considering rollback. Verification must use a fresh export
+of the complete original scope, not only records the write was intended to affect.
 
 Read [references/artifacts.md](references/artifacts.md) when consuming the JSON artifacts or
 building an adapter. The receipt is tamper-evident through SHA-256 digests, not cryptographically
@@ -65,6 +70,8 @@ signed and not proof of who approved or executed a change.
 ## Important boundaries
 
 - Preserve source exports and plan artifacts; verification depends on them.
+- If the tool exits `3`, stop and present its actionable input error. Never turn an input
+  failure into an `allow` or `passed` result.
 - Do not include secrets in policies or exports. Outputs repeat changed field values locally.
 - A passing file comparison does not prove downstream workflows, emails, billing, or syncs
   behaved correctly unless their resulting fields are present in the post-change export.

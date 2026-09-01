@@ -130,6 +130,32 @@ class CliTests(unittest.TestCase):
             self.assertEqual(evidence["status"], "failed")
             self.assertEqual(evidence["side_effects"][0]["field"], "note")
 
+    def test_verification_checks_unchanged_records_and_binds_actual_export(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            plan, verification = root / "plan", root / "verification"
+            run_guard("plan", "--before", FIXTURES / "current.csv",
+                      "--proposed", FIXTURES / "proposed-safe.csv", "--key", "record_id",
+                      "--policy", FIXTURES / "policy.json", "--out", plan)
+            with (FIXTURES / "actual-safe.csv").open(encoding="utf-8") as source:
+                rows = list(csv.DictReader(source))
+            unchanged = next(row for row in rows if row["record_id"] == "2")
+            unchanged["owner"] = "unexpected-owner"
+            actual = root / "actual.csv"
+            with actual.open("w", encoding="utf-8", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=rows[0].keys())
+                writer.writeheader()
+                writer.writerows(rows)
+            result = run_guard("verify", "--before", FIXTURES / "current.csv",
+                               "--actual", actual, "--key", "record_id",
+                               "--plan", plan, "--out", verification)
+            self.assertEqual(result.returncode, 1, result.stderr)
+            evidence = json.loads((verification / "verification.json").read_text(encoding="utf-8"))
+            self.assertIn("2", {item["record_id"] for item in evidence["side_effects"]})
+            receipt = json.loads((verification / "receipt.json").read_text(encoding="utf-8"))
+            self.assertEqual(receipt["sources"]["actual"]["sha256"],
+                             __import__("hashlib").sha256(actual.read_bytes()).hexdigest())
+
     def test_verification_rejects_tampered_changeset(self):
         with tempfile.TemporaryDirectory() as tmp:
             plan = pathlib.Path(tmp) / "plan"
@@ -166,9 +192,25 @@ class CliTests(unittest.TestCase):
                       "--policy", FIXTURES / "policy.json", "--out", out)
             with open(out / "rollback.csv", encoding="utf-8", newline="") as handle:
                 rows = list(csv.DictReader(handle))
-            stage = next(row for row in rows if row["record_id"] == "1" and row["field"] == "lifecycle_stage")
+            stage = next(row for row in rows
+                         if json.loads(row["record_id_json"]) == "1"
+                         and json.loads(row["field_json"]) == "lifecycle_stage")
             self.assertEqual(json.loads(stage["value_json"]), "lead")
             self.assertEqual(json.loads(stage["expected_current_value_json"]), "mql")
+
+    def test_operation_csv_json_encodes_formula_like_identifiers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            before, proposed, out = root / "before.csv", root / "proposed.csv", root / "out"
+            before.write_text("record_id,stage\n=1,lead\n", encoding="utf-8")
+            proposed.write_text("record_id,stage\n=1,mql\n", encoding="utf-8")
+            result = run_guard("plan", "--before", before, "--proposed", proposed,
+                               "--key", "record_id", "--out", out)
+            self.assertIn(result.returncode, (0, 1))
+            with (out / "rollback.csv").open(encoding="utf-8", newline="") as handle:
+                row = next(csv.DictReader(handle))
+            self.assertEqual(json.loads(row["record_id_json"]), "=1")
+            self.assertTrue(row["record_id_json"].startswith('"'))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,45 @@
+name: Bug report
+description: Report unsafe or confusing behavior using synthetic data
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Never attach production exports, credentials, or real customer data. Report vulnerabilities privately.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Explain why the result is incorrect or unsafe.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal synthetic reproduction
+      description: Include fictional input, command, full redacted output, and exit code.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: v0.2.0
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Data-safety confirmation
+      options:
+        - label: I used only synthetic data and removed all customer information and credentials.
+          required: true
+        - label: This is not a vulnerability requiring private disclosure.
+          required: true

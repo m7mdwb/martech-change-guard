@@ -1,0 +1,32 @@
+name: Policy or guard proposal
+description: Propose a deterministic safety rule for CRM changes
+title: "[Policy] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: risk
+    attributes:
+      label: Operational risk
+      description: What real bulk-change failure should this prevent?
+    validations:
+      required: true
+  - type: textarea
+    id: rule
+    attributes:
+      label: Deterministic rule
+      description: Define required inputs, exact decision logic, and evidence shown to a human.
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Synthetic safe and unsafe examples
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Project boundaries
+      options:
+        - label: The proposal needs no credentials, connector, service, telemetry, or live write.
+          required: true

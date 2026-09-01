@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import os
 import sys
 
 from engine import (GuardError, assess, diff_records, load_changeset, read_policy,
-                    read_records, sha256_file, verify_changes, write_plan, write_verification)
+                    read_records, require_matching_schema, sha256_file, verify_changes,
+                    write_plan, write_verification)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -40,7 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
 def render_plan(report, out_dir: str) -> str:
     blast = report["blast_radius"]
     lines = [
-        "Martech Change Guard · PLAN %s" % report["decision"].upper(),
+        "MarTech Change Guard - PLAN %s" % report["decision"].upper(),
         "=" * 72,
         "Risk: %s (%d/100)" % (report["risk"]["level"], report["risk"]["score"]),
         "Blast radius: %d of %d records (%.2f%%), %d field changes" %
@@ -65,11 +67,11 @@ def render_plan(report, out_dir: str) -> str:
 def render_verification(verification, out_dir: str) -> str:
     summary = verification["summary"]
     lines = [
-        "Martech Change Guard · VERIFY %s" % verification["status"].upper(),
+        "MarTech Change Guard - VERIFY %s" % verification["status"].upper(),
         "=" * 72,
-        "%d approved changes · %d mismatches · %d side effects · %d missing records" %
+        "%d approved changes - %d mismatches - %d side effects - %d missing - %d unexpected records" %
         (summary["approved_field_changes"], summary["mismatches"],
-         summary["side_effects"], summary["missing_records"]),
+         summary["side_effects"], summary["missing_records"], summary["unexpected_records"]),
         "Receipt: %s" % os.path.abspath(os.path.join(out_dir, "receipt.json")),
     ]
     return "\n".join(lines)
@@ -78,6 +80,7 @@ def render_verification(verification, out_dir: str) -> str:
 def run_plan(args) -> int:
     _, before = read_records(args.before, args.key)
     _, proposed = read_records(args.proposed, args.key)
+    require_matching_schema(before, proposed, "before", "proposed")
     policy = read_policy(args.policy)
     changeset = diff_records(before, proposed, args.key)
     changeset["sources"] = {
@@ -94,25 +97,37 @@ def run_plan(args) -> int:
 def run_verify(args) -> int:
     _, before = read_records(args.before, args.key)
     _, actual = read_records(args.actual, args.key)
+    require_matching_schema(before, actual, "before", "actual")
     changeset = load_changeset(args.plan)
     planned_before_hash = changeset.get("sources", {}).get("before", {}).get("sha256")
     if not planned_before_hash or sha256_file(args.before) != planned_before_hash:
         raise GuardError("--before does not match the current-state export used to create the plan")
     verification = verify_changes(changeset, before, actual, args.key)
-    write_verification(args.out, args.plan, verification, args.force)
+    sources = {
+        "before": {"name": os.path.basename(args.before), "sha256": sha256_file(args.before)},
+        "actual": {"name": os.path.basename(args.actual), "sha256": sha256_file(args.actual)},
+    }
+    write_verification(args.out, args.plan, verification, sources, args.force)
     print(render_verification(verification, args.out))
     return 0 if verification["status"] == "passed" else 1
 
 
 def main(argv=None) -> int:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     args = build_parser().parse_args(argv)
     try:
         return run_plan(args) if args.command == "plan" else run_verify(args)
     except GuardError as exc:
         print("guard error: %s" % exc, file=sys.stderr)
         return 3
-    except OSError as exc:
-        print("filesystem error: %s" % exc, file=sys.stderr)
+    except (OSError, UnicodeError, csv.Error, json.JSONDecodeError) as exc:
+        print("guard error: could not process the supplied files: %s" % exc, file=sys.stderr)
+        return 3
+    except Exception as exc:
+        print("guard error: input could not be processed safely (%s). Check the export "
+              "format or report this synthetic case." % type(exc).__name__, file=sys.stderr)
         return 3
 
 
