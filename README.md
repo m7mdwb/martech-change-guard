@@ -16,6 +16,23 @@ writes and unexpected side effects.
 It is local, deterministic, connector-free, and Python-standard-library only. **It never
 connects to or writes to your CRM.**
 
+## The MarTech safety loop
+
+This repository is the preventive half of a connected workflow with
+[MarTech Verify](https://github.com/m7mdwb/martech-verify):
+
+1. `$martech-audit` diagnoses a routing, privacy, attribution, or conversion problem from
+   read-only exports.
+2. `$martech-change-guard` binds that report with `--evidence`, compares current and proposed
+   records, and prepares the canary and rollback.
+3. A human approves any external CRM/import action.
+4. Change Guard verifies a fresh export and issues a receipt.
+
+![MarTech Verify to Change Guard walkthrough](docs/martech-ops-loop-demo.gif)
+
+[Read the complete walkthrough](docs/MARTECH-OPS-LOOP.md) or
+[watch the MP4 recording](docs/martech-ops-loop-walkthrough.mp4).
+
 ## Start here
 
 You provide three exports over one change lifecycle:
@@ -130,9 +147,10 @@ from plan through post-change evidence.
 ```bash
 python tests/run_all.py
 python tools/make_demo_gif.py --check
+python tools/make_connected_demo.py --check
 ```
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md), and the
-[v0.2.0 release](https://github.com/m7mdwb/martech-change-guard/releases/tag/v0.2.0).
+[v0.3.0 release](https://github.com/m7mdwb/martech-change-guard/releases/tag/v0.3.0).
 
 MIT licensed.

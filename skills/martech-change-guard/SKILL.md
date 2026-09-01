@@ -8,6 +8,11 @@ description: Preflight and verify proposed bulk changes to CRM or marketing reco
 Use the deterministic guard before a bulk data mutation. Do not substitute an LLM review
 for the script's changeset, invariant checks, rollback operations, or verification result.
 
+If the request follows a `$martech-audit` finding, treat that finding as rationale rather
+than authorization. Preserve the audit's compact change brief and bind its JSON report with
+`--evidence <report.json>`. The guard remains responsible for comparing current and proposed
+exports and enforcing its own policy.
+
 Resolve `scripts/guard.py` relative to this `SKILL.md` and invoke that resolved absolute
 path. Installed plugins run from the user's project, so do not assume `scripts/guard.py`
 exists under the current working directory. Keep input and output paths in the user's
@@ -24,7 +29,8 @@ touching the live system. Then run:
 
 ```bash
 python <absolute-skill-directory>/scripts/guard.py plan --before current.csv --proposed proposed.csv \
-  --key record_id --policy policy.json --out guard-plan
+  --key record_id --policy policy.json --reason "Why this change is needed" \
+  --evidence audit-report.json --out guard-plan
 ```
 
 Read `guard-plan/risk-report.json` and lead with its decision:

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import os
 import pathlib
@@ -83,6 +84,24 @@ class EngineTests(unittest.TestCase):
 
 
 class CliTests(unittest.TestCase):
+    def test_plan_binds_upstream_evidence_and_reason(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            evidence = root / "routing-report.json"
+            evidence.write_text('{"unrouted": 9}', encoding="utf-8")
+            out = root / "plan"
+            result = run_guard("plan", "--before", FIXTURES / "current.csv",
+                               "--proposed", FIXTURES / "proposed-safe.csv",
+                               "--key", "record_id", "--evidence", evidence,
+                               "--reason", "Assign nine unrouted leads", "--out", out)
+            self.assertIn(result.returncode, (0, 1))
+            changeset = json.loads((out / "changeset.json").read_text(encoding="utf-8"))
+            self.assertEqual(changeset["reason"], "Assign nine unrouted leads")
+            self.assertEqual(changeset["sources"]["evidence"], [{
+                "name": "routing-report.json",
+                "sha256": hashlib.sha256(evidence.read_bytes()).hexdigest(),
+            }])
+
     def test_blocked_fixture_returns_two_and_writes_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = pathlib.Path(tmp) / "plan"

@@ -1,0 +1,10 @@
+lead_id,owner,consent_status
+L014,kenji,granted
+L015,sam,granted
+L016,kenji,granted
+L018,sam,granted
+L020,kenji,revoked
+L021,sam,granted
+L022,kenji,granted
+L023,sam,granted
+L024,kenji,granted

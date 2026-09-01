@@ -1,6 +1,6 @@
 {
   "name": "martech-change-guard",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Preflight, verify, and reverse bulk CRM and marketing-data changes.",
   "author": {
     "name": "Mohamed Wagdy Bondok"

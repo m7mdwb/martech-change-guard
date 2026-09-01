@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 - 2026-09-01
+
+- Add the connected MarTech Verify → Change Guard walkthrough in GIF and MP4 formats.
+- Bind one or more upstream audit reports into a changeset with `--evidence` SHA-256 hashes.
+- Record a plain-language plan rationale with `--reason`.
+- Add a synthetic lead-routing handoff with a passing result and a planted consent side effect.
+- Teach both agent workflows the diagnose → plan → approve → verify handoff.
+- Coordinate Claude Code and Codex packaging at v0.3.0.
+
 ## 0.2.0 - 2026-09-01
 
 - Detect side effects across the complete post-change export, including untouched records.

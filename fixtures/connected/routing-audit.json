@@ -1,0 +1,36 @@
+{
+  "source": {
+    "repository": "https://github.com/m7mdwb/martech-verify",
+    "commit": "059c425",
+    "skill": "routing-simulate",
+    "fixture": "fixtures/routing-simulate/leads_sample.csv"
+  },
+  "result": {
+    "leads": 30,
+    "rules": 6,
+    "unrouted": 9,
+    "assignments": {
+      "ana": 19,
+      "sam": 1,
+      "lee": 1,
+      "unassigned": 9
+    },
+    "problems": [
+      {
+        "kind": "unknown_field",
+        "severity": "critical",
+        "detail": "High intent trial tests employes, which no lead carries"
+      },
+      {
+        "kind": "shadowed_rule",
+        "severity": "high",
+        "detail": "France mid-market matched 3 leads and won none"
+      },
+      {
+        "kind": "unrouted_leads",
+        "severity": "high",
+        "detail": "9 leads (30%) fell to unassigned"
+      }
+    ]
+  }
+}

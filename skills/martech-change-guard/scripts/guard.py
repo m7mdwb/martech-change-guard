@@ -23,6 +23,9 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--proposed", required=True, help="proposed-state export")
     plan.add_argument("--key", required=True, help="stable record ID field")
     plan.add_argument("--policy", help="optional JSON policy")
+    plan.add_argument("--reason", help="plain-language reason for the proposed change")
+    plan.add_argument("--evidence", action="append", default=[],
+                      help="local evidence file to bind by SHA-256; may be repeated")
     plan.add_argument("--out", required=True, help="new or empty output directory")
     plan.add_argument("--canary-size", type=int, default=25)
     plan.add_argument("--force", action="store_true",
@@ -87,7 +90,13 @@ def run_plan(args) -> int:
         "before": {"name": os.path.basename(args.before), "sha256": sha256_file(args.before)},
         "proposed": {"name": os.path.basename(args.proposed),
                      "sha256": sha256_file(args.proposed)},
+        "evidence": [
+            {"name": os.path.basename(path), "sha256": sha256_file(path)}
+            for path in args.evidence
+        ],
     }
+    if args.reason:
+        changeset["reason"] = args.reason
     report = assess(changeset, policy)
     write_plan(args.out, changeset, report, args.canary_size, args.force)
     print(render_plan(report, args.out))

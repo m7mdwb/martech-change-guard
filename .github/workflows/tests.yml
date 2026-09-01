@@ -23,4 +23,5 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: python tests/run_all.py
       - run: python tools/make_demo_gif.py --check
+      - run: python tools/make_connected_demo.py --check
       - run: python -m compileall -q skills tests

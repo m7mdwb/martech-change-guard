@@ -1,0 +1,9 @@
+{
+  "allowed_fields": ["owner"],
+  "protected_fields": ["consent_status"],
+  "approval_required_over_records": 5,
+  "approval_required_over_percent": 50,
+  "hard_limit_records": 20,
+  "hard_limit_percent": 100,
+  "risk_weights": {"owner": 20}
+}

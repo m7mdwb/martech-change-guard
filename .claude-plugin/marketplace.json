@@ -12,7 +12,7 @@
         "repo": "m7mdwb/martech-verify"
       },
       "description": "What is wrong with this data? Audit PII leakage, UTM tagging, conversion gaps and lead routing from local exports.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "author": {
         "name": "Mohamed Wagdy Bondok"
       }
@@ -21,7 +21,7 @@
       "name": "martech-change-guard",
       "source": ".",
       "description": "Is it safe to make this change? Preflight, verify and reverse bulk CRM and marketing-data changes.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "author": {
         "name": "Mohamed Wagdy Bondok"
       }

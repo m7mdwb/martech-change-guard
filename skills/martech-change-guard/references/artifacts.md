@@ -3,7 +3,9 @@
 ## Plan artifacts
 
 - `changeset.json`: SHA-256 source fingerprints, field-level before/after values, record counts, and
-  added/removed IDs. This is the approved unit of work.
+  added/removed IDs. Optional `reason` text and `sources.evidence` hashes link the plan to
+  upstream audit reports without trusting or interpreting their contents. This is the
+  approved unit of work.
 - `risk-report.json`: `allow`, `review`, or `block`; deterministic score and level; blast
   radius; invariant violations; and warnings.
 - `canary.csv`: a deterministic, diverse subset of changed records. Rows are field-level

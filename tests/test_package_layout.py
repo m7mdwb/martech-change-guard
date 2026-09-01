@@ -8,7 +8,7 @@ import unittest
 
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 
 class PackageTests(unittest.TestCase):
@@ -40,6 +40,7 @@ class PackageTests(unittest.TestCase):
         self.assertTrue(readme.startswith("# MarTech Change Guard"))
         self.assertIn("claude plugin marketplace add m7mdwb/martech-change-guard", readme)
         self.assertIn("$skill-installer", readme)
+        self.assertIn("MarTech safety loop", readme)
         self.assertNotRegex(readme, re.compile(r"\bMartech\b"))
 
 
